@@ -1,0 +1,41 @@
+{
+  "name": "@cvsloane/x-accel-mcp",
+  "version": "0.1.0",
+  "description": "Thin stdio MCP client for the x-accel SaaS",
+  "type": "module",
+  "bin": {
+    "x-accel-mcp": "./bin/x-accel-mcp.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node ./bin/x-accel-mcp.mjs",
+    "test": "node --test"
+  },
+  "keywords": [
+    "mcp",
+    "x-accel",
+    "claude-code",
+    "codex"
+  ],
+  "author": "cvsloane",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cvsloane/x-accel-mcp.git"
+  },
+  "homepage": "https://github.com/cvsloane/x-accel-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/cvsloane/x-accel-mcp/issues"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  }
+}
