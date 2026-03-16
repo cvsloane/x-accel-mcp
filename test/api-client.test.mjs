@@ -50,6 +50,40 @@ test("fetchManifest normalizes server metadata and sends auth", async () => {
   assert.equal(manifest.tools[0].name, "x_accounts_list");
 });
 
+test("fetchManifest tolerates null inputSchema values", async () => {
+  const client = new XAccelApiClient({
+    baseUrl: "https://hgxaccel.com/",
+    token: "token_123",
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          server: {
+            name: "x-accel",
+            version: "1.0.0",
+          },
+          tools: [
+            {
+              name: "x_accounts_list",
+              description: "List accounts",
+              inputSchema: null,
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }
+      ),
+  });
+
+  const manifest = await client.fetchManifest();
+
+  assert.equal(manifest.tools[0].inputSchema.type, "object");
+  assert.deepEqual(manifest.tools[0].inputSchema.properties, {});
+});
+
 test("jsonSchemaToZod validates required and optional tool args", () => {
   const schema = jsonSchemaToZod({
     type: "object",

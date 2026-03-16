@@ -1,6 +1,6 @@
 {
   "name": "@cvsloane/x-accel-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Thin stdio MCP client for the x-accel SaaS",
   "type": "module",
   "bin": {

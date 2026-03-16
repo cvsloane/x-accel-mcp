@@ -7,7 +7,7 @@ const manifestToolSchema = z
     name: z.string().min(1),
     title: z.string().optional(),
     description: z.string().optional(),
-    inputSchema: jsonSchemaSchema.optional(),
+    inputSchema: jsonSchemaSchema.nullish(),
   })
   .passthrough();
 
