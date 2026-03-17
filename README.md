@@ -58,3 +58,7 @@ npx -y @cvsloane/x-accel-mcp
 3. Forward each tool call to `POST /api/mcp/v1/invoke`
 
 This package intentionally stays thin. All tenant isolation, billing checks, provider access, and business logic remain in the SaaS.
+
+## Development Status
+
+See [project_status.md](./project_status.md) for recent development activity and context.
