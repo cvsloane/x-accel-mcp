@@ -2,7 +2,10 @@ import { z } from "zod";
 
 const envSchema = z.object({
   X_ACCEL_BASE_URL: z.url({ error: "X_ACCEL_BASE_URL must be a valid URL" }),
-  X_ACCEL_MCP_TOKEN: z.string().trim().min(1, "X_ACCEL_MCP_TOKEN is required"),
+  X_ACCEL_MCP_TOKEN: z
+    .string({ error: "X_ACCEL_MCP_TOKEN is required" })
+    .trim()
+    .min(1, "X_ACCEL_MCP_TOKEN is required"),
 });
 
 export function readConfig(env = process.env) {

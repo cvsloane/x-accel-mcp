@@ -1,7 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { XAccelApiClient } from "../src/api-client.mjs";
+import { XAccelApiClient, normalizeManifest } from "../src/api-client.mjs";
+import { readConfig } from "../src/config.mjs";
 import { jsonSchemaToZod } from "../src/json-schema-to-zod.mjs";
+
+function jsonResponse(body, init = {}) {
+  return new Response(JSON.stringify(body), {
+    status: init.status ?? 200,
+    headers: {
+      "content-type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+}
+
+function createFetchStub(response) {
+  const calls = [];
+  const fetchImpl = async (...args) => {
+    calls.push(args);
+    return typeof response === "function" ? response(...args) : response;
+  };
+
+  return { calls, fetchImpl };
+}
 
 test("fetchManifest normalizes server metadata and sends auth", async () => {
   let requestedUrl;
@@ -109,4 +130,92 @@ test("jsonSchemaToZod handles single-value non-string enums", () => {
 
   assert.equal(schema.safeParse(1).success, true);
   assert.equal(schema.safeParse(2).success, false);
+});
+
+test("readConfig validates required env and trims trailing slashes", () => {
+  assert.deepEqual(
+    readConfig({
+      X_ACCEL_BASE_URL: "https://x-accel.test///",
+      X_ACCEL_MCP_TOKEN: "test-token",
+    }),
+    {
+      baseUrl: "https://x-accel.test",
+      token: "test-token",
+    }
+  );
+
+  assert.throws(
+    () => readConfig({ X_ACCEL_BASE_URL: "https://x-accel.test" }),
+    /X_ACCEL_MCP_TOKEN is required/
+  );
+});
+
+test("normalizeManifest preserves tools and backfills legacy server metadata", () => {
+  const manifest = normalizeManifest({
+    name: "legacy-x-accel",
+    version: "1.2.3",
+    tools: [
+      {
+        name: "x_accel_lookup_post",
+        title: "Lookup Post",
+      },
+    ],
+  });
+
+  assert.equal(manifest.server.name, "legacy-x-accel");
+  assert.equal(manifest.server.version, "1.2.3");
+  assert.deepEqual(manifest.tools, [
+    {
+      name: "x_accel_lookup_post",
+      title: "Lookup Post",
+      description: undefined,
+      inputSchema: {
+        type: "object",
+        properties: {},
+      },
+    },
+  ]);
+});
+
+test("invokeTool posts the tool name and arguments to the invoke endpoint", async () => {
+  const { calls, fetchImpl } = createFetchStub(jsonResponse({
+    content: [{ type: "text", text: "ok" }],
+  }));
+  const client = new XAccelApiClient({
+    baseUrl: "https://x-accel.test",
+    token: "secret-token",
+    fetchImpl,
+  });
+
+  const result = await client.invokeTool("x_accel_status", { limit: 5 });
+
+  assert.deepEqual(result, { content: [{ type: "text", text: "ok" }] });
+  assert.equal(calls[0][0], "https://x-accel.test/api/mcp/v1/invoke");
+  assert.equal(calls[0][1].method, "POST");
+  assert.equal(calls[0][1].headers.authorization, "Bearer secret-token");
+  assert.equal(calls[0][1].headers["content-type"], "application/json");
+  assert.deepEqual(JSON.parse(calls[0][1].body), {
+    tool: "x_accel_status",
+    arguments: { limit: 5 },
+  });
+});
+
+test("request errors redact the MCP token if the server echoes it", async () => {
+  const { fetchImpl } = createFetchStub(jsonResponse({
+    error: "bad token secret-token",
+  }, { status: 401 }));
+  const client = new XAccelApiClient({
+    baseUrl: "https://x-accel.test",
+    token: "secret-token",
+    fetchImpl,
+  });
+
+  await assert.rejects(
+    () => client.fetchManifest(),
+    (error) => {
+      assert.match(error.message, /x-accel request failed \(401\): bad token \[REDACTED\]/);
+      assert.doesNotMatch(error.message, /secret-token/);
+      return true;
+    }
+  );
 });

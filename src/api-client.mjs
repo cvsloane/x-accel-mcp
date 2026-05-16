@@ -85,6 +85,14 @@ function formatErrorBody(body) {
   return "Unknown error";
 }
 
+function redactSecret(value, secret) {
+  if (!secret || typeof value !== "string") {
+    return value;
+  }
+
+  return value.split(secret).join("[REDACTED]");
+}
+
 export class XAccelApiClient {
   constructor({ baseUrl, token, fetchImpl = fetch, timeoutMs = 10000 }) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
@@ -128,7 +136,8 @@ export class XAccelApiClient {
     const body = await readResponseBody(response);
 
     if (!response.ok) {
-      throw new Error(`x-accel request failed (${response.status}): ${formatErrorBody(body)}`);
+      const safeBody = redactSecret(formatErrorBody(body), this.token);
+      throw new Error(`x-accel request failed (${response.status}): ${safeBody}`);
     }
 
     return body;
